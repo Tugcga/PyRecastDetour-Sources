@@ -1,0 +1,3 @@
+*.vcxproj
+x64
+Contrib/SDL/

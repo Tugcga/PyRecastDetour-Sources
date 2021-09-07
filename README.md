@@ -1,1 +1,1 @@
-PyRecastDetour Source
+Source files of the [PyRecastDetour](https://github.com/Tugcga/PyRecastDetour) module for Python. It use [PyBind11](https://github.com/pybind/pybind11) for bindings and based on default example application from original [Recast Navigation](https://github.com/recastnavigation/recastnavigation) repository.
