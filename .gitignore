@@ -1,5 +1,5 @@
+*.txt
 *.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
+*.user
 x64
 Contrib/SDL/

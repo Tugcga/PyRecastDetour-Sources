@@ -17,7 +17,11 @@ PYBIND11_MODULE(Py37RecastDetour, m)
 #ifdef _Python38
 PYBIND11_MODULE(Py38RecastDetour, m)
 #else
+#ifdef _Python39
 PYBIND11_MODULE(Py39RecastDetour, m)
+#else
+PYBIND11_MODULE(Py310RecastDetour, m)
+#endif
 #endif
 #endif
 #endif
