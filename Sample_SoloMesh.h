@@ -79,6 +79,8 @@ public:
 	void save_to_file(const char* path);
 	void load_from_file(const char* path);
 
+	rcPolyMesh* get_m_pmesh() { return m_pmesh; };
+
 private:
 	// Explicitly disabled copy constructor and copy assignment operator.
 	Sample_SoloMesh(const Sample_SoloMesh&);

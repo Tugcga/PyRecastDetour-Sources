@@ -1,5 +1,6 @@
 #include "Navmesh.h"
 
+#ifndef _MAIN_APP
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -48,3 +49,4 @@ PYBIND11_MODULE(Py310RecastDetour, m)
 		.def("get_navmesh_polygonization", &Navmesh::get_navmesh_polygonization)
 		.def("hit_mesh", &Navmesh::hit_mesh, py::arg("start"), py::arg("end"));
 }
+#endif // !_MAIN_APP

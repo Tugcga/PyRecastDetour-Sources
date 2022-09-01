@@ -203,37 +203,27 @@ std::tuple<std::vector<float>, std::vector<int>> Navmesh::get_navmesh_trianglula
 		std::vector<float> vertices(0);
 		std::vector<int> triangles(0);
 
-		dtNavMesh* navmesh = sample->getNavMesh();
-		int max_tiles = navmesh->getMaxTiles();
-		int start_tile_index = 0;
-		for (size_t i = 0; i < max_tiles; i++)
-		{
-			const dtMeshTile* tile = navmesh->getTile(i);
-			if (!tile->header) continue;
+		rcPolyMesh* pmesh = sample->get_m_pmesh();
+		for (int v_index = 0; v_index < pmesh->nverts; v_index++) {
+			vertices.push_back(pmesh->bmin[0] + pmesh->cs * pmesh->verts[3 * v_index]);
+			vertices.push_back(pmesh->bmin[1] + pmesh->ch * pmesh->verts[3 * v_index + 1]);
+			vertices.push_back(pmesh->bmin[2] + pmesh->cs * pmesh->verts[3 * v_index + 2]);
+		}
 
-			for (size_t j = 0; j < tile->header->vertCount; j++)
-			{
-				vertices.push_back(tile->verts[3*j]);
-				vertices.push_back(tile->verts[3 * j + 1]);
-				vertices.push_back(tile->verts[3 * j + 2]);
-			}
+		for (int p_index = 0; p_index < pmesh->npolys; p_index++) {
+			int pv = p_index * 2 * pmesh->nvp;
+			unsigned short v_start = pmesh->polys[pv];
 
-			for (int j = 0; j < tile->header->polyCount; ++j)
-			{
-				const dtPoly* p = &tile->polys[j];
-				if (p->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)	// skip off-mesh links.
-					continue;
-
-				const dtPolyDetail* pd = &tile->detailMeshes[j];
-				for (int k = 0; k < pd->triCount; ++k)
-				{
-					const unsigned char* t = &tile->detailTris[(pd->triBase + k) * 4];
-					triangles.push_back(p->verts[t[0]] + start_tile_index);
-					triangles.push_back(p->verts[t[1]] + start_tile_index);
-					triangles.push_back(p->verts[t[2]] + start_tile_index);
+			for (int j = 2; j < pmesh->nvp; j++) {
+				unsigned short v = pmesh->polys[pv + j];
+				if (v == 0xffff) {
+					break;
 				}
+				unsigned short v_prev = pmesh->polys[pv + j - 1];
+				triangles.push_back(v_start);
+				triangles.push_back(v_prev);
+				triangles.push_back(v);
 			}
-			start_tile_index += tile->header->vertCount;
 		}
 
 		std::tuple<std::vector<float>, std::vector<int>> to_return = std::make_tuple(vertices, triangles);
@@ -257,32 +247,25 @@ std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> Navmesh::get_
 		std::vector<int> polygons(0);
 		std::vector<int> sizes(0);
 
-		dtNavMesh* navmesh = sample->getNavMesh();
-		int max_tiles = navmesh->getMaxTiles();
-		for (size_t i = 0; i < max_tiles; i++)
-		{
-			const dtMeshTile* tile = navmesh->getTile(i);
-			if (!tile->header) continue;
+		rcPolyMesh* pmesh = sample->get_m_pmesh();
+		for (int v_index = 0; v_index < pmesh->nverts; v_index++) {
+			vertices.push_back(pmesh->bmin[0] + pmesh->cs * pmesh->verts[3 * v_index]);
+			vertices.push_back(pmesh->bmin[1] + pmesh->ch * pmesh->verts[3 * v_index + 1]);
+			vertices.push_back(pmesh->bmin[2] + pmesh->cs * pmesh->verts[3 * v_index + 2]);
+		}
 
-			for (size_t j = 0; j < tile->header->vertCount; j++)
-			{
-				vertices.push_back(tile->verts[3 * j]);
-				vertices.push_back(tile->verts[3 * j + 1]);
-				vertices.push_back(tile->verts[3 * j + 2]);
-			}
-
-			for (int j = 0; j < tile->header->polyCount; ++j)
-			{
-				const dtPoly* p = &tile->polys[j];
-				if (p->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)	// skip off-mesh links.
-					continue;
-
-				for (int k = 0; k < p->vertCount; k++)
-				{
-					polygons.push_back(p->verts[k]);
+		for (int p_index = 0; p_index < pmesh->npolys; p_index++) {
+			int pv = p_index * 2 * pmesh->nvp;
+			unsigned short p_size = 0;
+			for (int j = 0; j < pmesh->nvp; j++) {
+				unsigned short v = pmesh->polys[pv + j];
+				if (v == 0xffff) {
+					break;
 				}
-				sizes.push_back(p->vertCount);
+				polygons.push_back(v);
+				p_size++;
 			}
+			sizes.push_back(p_size);
 		}
 
 		std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> to_return = std::make_tuple(vertices, polygons, sizes);
