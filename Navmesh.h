@@ -34,7 +34,9 @@ public:
 	void save_navmesh(std::string file_path);
 	void load_navmesh(std::string file_path);
 	std::tuple<std::vector<float>, std::vector<int>> get_navmesh_trianglulation();  // return the pair ([vertices coordinates], [triangles point indexes])
+	std::tuple<std::vector<float>, std::vector<int>> get_navmesh_trianglulation_sample();
 	std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> get_navmesh_polygonization();  // return the tripple ([vertex coordinates], [polygon vertex indexes], [polygon sizes])
+	std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> get_navmesh_polygonization_sample();
 	std::vector<float> hit_mesh(std::vector<float> start, std::vector<float> end);
 
 private:

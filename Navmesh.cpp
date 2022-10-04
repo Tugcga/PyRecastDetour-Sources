@@ -58,7 +58,7 @@ std::map<std::string, float> Navmesh::get_settings()
 		to_return["regionMergeSize"] = settings.regionMergeSize;
 		to_return["edgeMaxLen"] = settings.edgeMaxLen;
 		to_return["edgeMaxError"] = settings.edgeMaxError;
-		to_return["vertsPerPoly"] = settings.vertsPerPoly;
+		to_return["vertsPerPoly"] = settings.vertsPerPoly;  // this value should be <= 6 and >= 3
 		to_return["detailSampleDist"] = settings.detailSampleDist;
 		to_return["detailSampleMaxError"] = settings.detailSampleMaxError;
 	}
@@ -80,17 +80,17 @@ void Navmesh::set_settings(std::map<std::string, float> settings)
 			std::string k = it->first;
 			float v = it->second;
 
-			if (k == "cellSize") { sample->set_cell_size(v); }
-			if (k == "cellHeight") { sample->set_cell_height(v); }
-			if (k == "agentHeight") { sample->set_agent_height(v); }
-			if (k == "agentRadius") { sample->set_agent_radius(v); }
+			if (k == "cellSize") { sample->set_cell_size(std::max(v, 0.0001f)); }
+			if (k == "cellHeight") { sample->set_cell_height(std::max(v, 0.0001f)); }
+			if (k == "agentHeight") { sample->set_agent_height(std::max(v, 0.0f)); }
+			if (k == "agentRadius") { sample->set_agent_radius(std::max(v, 0.0f)); }
 			if (k == "agentMaxClimb") { sample->set_agent_max_climb(v); }
 			if (k == "agentMaxSlope") { sample->set_agent_max_slope(v); }
 			if (k == "regionMinSize") { sample->set_region_min_size(v); }
 			if (k == "regionMergeSize") { sample->set_region_merge_size(v); }
 			if (k == "edgeMaxLen") { sample->set_edge_max_len(v); }
 			if (k == "edgeMaxError") { sample->set_edge_max_error(v); }
-			if (k == "vertsPerPoly") { sample->set_verts_per_poly(v); }
+			if (k == "vertsPerPoly") { sample->set_verts_per_poly(std::max(3.0f, std::min(v, 6.0f))); }
 			if (k == "detailSampleDist") { sample->set_detail_sample_dist(v); }
 			if (k == "detailSampleMaxError") { sample->set_detail_sample_max_error(v); }
 		}
@@ -239,6 +239,59 @@ std::tuple<std::vector<float>, std::vector<int>> Navmesh::get_navmesh_trianglula
 	}
 }
 
+std::tuple<std::vector<float>, std::vector<int>> Navmesh::get_navmesh_trianglulation_sample()
+{
+	if (is_build)
+	{
+		std::vector<float> vertices(0);
+		std::vector<int> triangles(0);
+
+		dtNavMesh* navmesh = sample->getNavMesh();
+		int max_tiles = navmesh->getMaxTiles();
+		int start_tile_index = 0;
+		for (size_t i = 0; i < max_tiles; i++)
+		{
+			const dtMeshTile* tile = navmesh->getTile(i);
+			if (!tile->header) continue;
+
+			for (size_t j = 0; j < tile->header->vertCount; j++)
+			{
+				vertices.push_back(tile->verts[3 * j]);
+				vertices.push_back(tile->verts[3 * j + 1]);
+				vertices.push_back(tile->verts[3 * j + 2]);
+			}
+
+			for (int j = 0; j < tile->header->polyCount; ++j)
+			{
+				const dtPoly* p = &tile->polys[j];
+				if (p->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)	// skip off-mesh links.
+					continue;
+
+				const dtPolyDetail* pd = &tile->detailMeshes[j];
+				for (int k = 0; k < pd->triCount; ++k)
+				{
+					const unsigned char* t = &tile->detailTris[(pd->triBase + k) * 4];
+					triangles.push_back(p->verts[t[0]] + start_tile_index);
+					triangles.push_back(p->verts[t[1]] + start_tile_index);
+					triangles.push_back(p->verts[t[2]] + start_tile_index);
+				}
+			}
+			start_tile_index += tile->header->vertCount;
+		}
+
+		std::tuple<std::vector<float>, std::vector<int>> to_return = std::make_tuple(vertices, triangles);
+		return to_return;
+	}
+	else
+	{
+		ctx.log(RC_LOG_ERROR, "Get navmesh trianglulation: navmesh is not builded.");
+		std::vector<float> vertices(0);
+		std::vector<int> triangles(0);
+		std::tuple<std::vector<float>, std::vector<int>> to_return = std::make_tuple(vertices, triangles);
+		return to_return;
+	}
+}
+
 std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> Navmesh::get_navmesh_polygonization()
 {
 	if (is_build)
@@ -266,6 +319,56 @@ std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> Navmesh::get_
 				p_size++;
 			}
 			sizes.push_back(p_size);
+		}
+
+		std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> to_return = std::make_tuple(vertices, polygons, sizes);
+		return to_return;
+	}
+	else
+	{
+		ctx.log(RC_LOG_ERROR, "Get navmesh polygonization: navmesh is not builded.");
+		std::vector<float> vertices(0);
+		std::vector<int> polygons(0);
+		std::vector<int> sizes(0);
+		std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> to_return = std::make_tuple(vertices, polygons, sizes);
+		return to_return;
+	}
+}
+
+std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> Navmesh::get_navmesh_polygonization_sample()
+{
+	if (is_build)
+	{
+		std::vector<float> vertices(0);
+		std::vector<int> polygons(0);
+		std::vector<int> sizes(0);
+
+		dtNavMesh* navmesh = sample->getNavMesh();
+		int max_tiles = navmesh->getMaxTiles();
+		for (size_t i = 0; i < max_tiles; i++)
+		{
+			const dtMeshTile* tile = navmesh->getTile(i);
+			if (!tile->header) continue;
+
+			for (size_t j = 0; j < tile->header->vertCount; j++)
+			{
+				vertices.push_back(tile->verts[3 * j]);
+				vertices.push_back(tile->verts[3 * j + 1]);
+				vertices.push_back(tile->verts[3 * j + 2]);
+			}
+
+			for (int j = 0; j < tile->header->polyCount; ++j)
+			{
+				const dtPoly* p = &tile->polys[j];
+				if (p->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)	// skip off-mesh links.
+					continue;
+
+				for (int k = 0; k < p->vertCount; k++)
+				{
+					polygons.push_back(p->verts[k]);
+				}
+				sizes.push_back(p->vertCount);
+			}
 		}
 
 		std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> to_return = std::make_tuple(vertices, polygons, sizes);
@@ -474,3 +577,39 @@ std::vector<float> Navmesh::hit_mesh(std::vector<float> start, std::vector<float
 		ctx.log(RC_LOG_ERROR, "Hit mesh: invalid input vectors.");
 	}
 }
+
+#ifdef _MAIN_APP
+void main() {
+	Navmesh* navmesh = new Navmesh();
+	navmesh->init_by_obj("disc.obj");
+	std::map<std::string, float> settings = navmesh->get_settings();
+	settings["vertsPerPoly"] = 12;
+	settings["cellSize"] = 0.1;
+
+	navmesh->set_settings(settings);
+	navmesh->build_navmesh();
+
+	std::tuple<std::vector<float>, std::vector<int>, std::vector<int>> mesh = navmesh->get_navmesh_polygonization();
+
+	std::string verts_str = "vertices: ";
+	std::vector<float> vertices = std::get<0>(mesh);
+	for (size_t i = 0; i < vertices.size(); i++) {
+		verts_str += std::to_string(vertices[i]) + ", ";
+	}
+	//std::cout << verts_str << std::endl;
+
+	std::string polys_str = "polygons: ";
+	std::vector<int> polygons = std::get<1>(mesh);
+	for (size_t i = 0; i < polygons.size(); i++) {
+		polys_str += std::to_string(polygons[i]) + ", ";
+	}
+	//std::cout << polys_str << std::endl;
+
+	std::string sizes_str = "sizes: ";
+	std::vector<int> sizes = std::get<2>(mesh);
+	for (size_t i = 0; i < sizes.size(); i++) {
+		sizes_str += std::to_string(sizes[i]) + ", ";
+	}
+	std::cout << sizes_str << std::endl;
+}
+#endif // _MAIN_APP

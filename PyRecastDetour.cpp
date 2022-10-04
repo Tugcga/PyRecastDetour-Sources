@@ -45,8 +45,8 @@ PYBIND11_MODULE(Py310RecastDetour, m)
 		.def("get_bounding_box", &Navmesh::get_bounding_box)
 		.def("save_navmesh", &Navmesh::save_navmesh, py::arg("file_path"))
 		.def("load_navmesh", &Navmesh::load_navmesh, py::arg("file_path"))
-		.def("get_navmesh_trianglulation", &Navmesh::get_navmesh_trianglulation)
-		.def("get_navmesh_polygonization", &Navmesh::get_navmesh_polygonization)
+		.def("get_navmesh_trianglulation", &Navmesh::get_navmesh_trianglulation_sample)
+		.def("get_navmesh_polygonization", &Navmesh::get_navmesh_polygonization_sample)
 		.def("hit_mesh", &Navmesh::hit_mesh, py::arg("start"), py::arg("end"));
 }
 #endif // !_MAIN_APP
