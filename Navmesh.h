@@ -24,6 +24,7 @@ public:
 	void build_navmesh();
 	std::string get_log();  // clear ctx log after call this function
 	std::vector<float> pathfind_straight(std::vector<float> start, std::vector<float> end, int vertex_mode = 0);  // return array of path point coordinates
+	std::vector<float> pathfind_straight_batch(std::vector<float> coordinates, int vertex_mode = 0);
 	float distance_to_wall(std::vector<float> point);
 	std::vector<float> raycast(std::vector<float> start, std::vector<float> end);
 	std::map<std::string, float> get_settings();

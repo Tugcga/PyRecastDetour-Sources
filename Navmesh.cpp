@@ -472,7 +472,7 @@ std::vector<float> Navmesh::pathfind_straight(std::vector<float> start, std::vec
 	}
 	else
 	{
-		if (is_build)
+		if (!is_build)
 		{
 			ctx.log(RC_LOG_ERROR, "Find straight path: navmesh is not builded.");
 		}
@@ -481,6 +481,46 @@ std::vector<float> Navmesh::pathfind_straight(std::vector<float> start, std::vec
 			ctx.log(RC_LOG_ERROR, "Find straight path: invalid input vectors.");
 		}
 		
+		std::vector<float> to_return(0);
+		return to_return;
+	}
+}
+
+std::vector<float> Navmesh::pathfind_straight_batch(std::vector<float> coordinates, int vertex_mode)
+{
+	if (coordinates.size() % 6 == 0 && is_build)
+	{
+		std::vector<float> to_return(0);
+		// we assume that first 6 coordinates in the array define the first pair of start and end point, next 6 coordinates defines the second pair and so on
+		for (size_t step = 0; step < coordinates.size() / 6; step++)
+		{
+			std::vector<float> start(3);
+			std::vector<float> end(3);
+			copy(coordinates.begin() + 6 * step, coordinates.begin() + 6 * step + 3, start.begin());
+			copy(coordinates.begin() + 6 * step + 3, coordinates.begin() + 6 * step + 6, end.begin());
+
+			// calculate the path
+			std::vector<float> path = pathfind_straight(start, end, vertex_mode);
+
+			// add calculated coordinates to the one output array
+			// each result starts from the number of points (and then x3 floats for actual coordinates)
+			to_return.push_back(path.size() / 3);
+			to_return.insert(to_return.end(), path.begin(), path.end());
+		}
+
+		return to_return;
+	}
+	else
+	{
+		if (!is_build)
+		{
+			ctx.log(RC_LOG_ERROR, "Find straight path batch: navmesh is not builded.");
+		}
+		else
+		{
+			ctx.log(RC_LOG_ERROR, "Find straight path batch: invalid input vector with coordinates.");
+		}
+
 		std::vector<float> to_return(0);
 		return to_return;
 	}
